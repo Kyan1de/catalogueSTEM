@@ -1,0 +1,64 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Hello from STEM</title>
+    <link href='https://fonts.googleapis.com/css?family=ADLaM Display' rel='stylesheet'>
+    <link rel="stylesheet" href="/static/styling.css">
+    <script>
+        function sortTable(ipt, tbl) {
+          // Declare variables
+          var input, filter, table, tr, td, i, txtValue;
+          input = document.getElementById(ipt);
+          filter = input.value.toUpperCase();
+          table = document.getElementById(tbl);
+          tr = table.getElementsByTagName("tr");
+  
+          // Loop through all table rows, and hide those who don't match the search query
+          for (i = 0; i < tr.length; i++) {
+            td = tr[i].getElementsByTagName("td")[0];
+            if (td) {
+              txtValue = td.textContent || td.innerText;
+              if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+              } else {
+                tr[i].style.display = "none";
+              }
+            }
+          }
+        }
+      </script>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/hello">hello</a>
+        <a href="/hello">hi</a>
+        <a href="/hello">testing</a>
+        <a href="/hello">abcdefghijklmnopqrstuvwxyz</a>
+    </div>
+    <div class="container">
+        <div class="inner">
+            <div class="dbLookup">
+                <input type="text" id="searchTerms" onkeyup="sortTable('searchTerms', 'data')">
+                <table id="data">
+                    <tr>
+                        <th>name</th>
+                        <th>location</th>
+                        <th>availability</th>
+                        <th>book</th>
+                    </tr>
+                    {% for a in data: %}
+                    <tr>
+                        <td>{{a[0]}}</td>
+                        <td>{{a[1]}}</td>
+                        <td>{{a[2]}}</td>
+                        <td>{{a[3]}}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div class="footer">
+                <p>Powered by duct tape and spite</p>
+            </div>
+        </div>
+    </div>
+</body>
