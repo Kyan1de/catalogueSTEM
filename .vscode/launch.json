@@ -7,7 +7,7 @@
         {
             "name":"DBG server",
             "type":"debugpy","request":"launch",
-            "program":"${workspaceFolder}\\server.py",
+            "program":"${workspaceFolder}\\main.py",
             "console":"integratedTerminal"
         }
     ]

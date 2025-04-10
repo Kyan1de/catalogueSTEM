@@ -2,3 +2,5 @@ flask
 flask-wtf # forms
 flask-sqlalchemy # db
 flask-migrate # db
+manyterm # multiple terminals
+tabulate # pretty tables for the command line
