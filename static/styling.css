@@ -1,3 +1,7 @@
+:root {
+    --img: url(/static/noimg.png)
+}
+
 body {
     box-sizing: border-box;
     margin: 0;
@@ -100,4 +104,13 @@ body {
 }
 td, th {
     border: 1px solid #000000;
+}
+
+.hoverImg:hover {position: relative;}
+.hoverImg:hover::after {
+    content: var(--img);
+    border: 3px solid #000000;
+    border-radius: 5px;
+    position: absolute;
+    left: calc(100% + 5px);
 }
