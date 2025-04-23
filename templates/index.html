@@ -4,20 +4,26 @@
     <title>Hello from STEM</title>
     <link href='https://fonts.googleapis.com/css?family=ADLaM Display' rel='stylesheet'>
     <link rel="stylesheet" href="/static/styling.css">
+    {% from 'macros.html' import navbar %}
 </head>
 <body>
-    <div class="navbar">
-        <a href="/">front page</a>
-        <a href="/db">main database</a>
-        <a href="/hello">testing</a>
-        <a href="/hello">abcdefghijklmnopqrstuvwxyz</a>
-    </div>
-    <div class="container">
-        <div class="inner">
-            <div style="width: 1px;height:1px;"></div>
-            <div class="footer">
-                <p>Powered by duct tape and spite</p>
-            </div>
+  {{ navbar() }}
+  <div class="container">
+    <div class="inner">
+      <div>
+        <h1>Welcome to the Catalogue!</h1>
+        <p>This is a tool for cataloguing and finding materials in the stem spaces. <br>
+          Please keep in mind that this is not a perfect tool, as it requires people to maintain it. <br>
+          There will be info on each page explaining them, as well as giving some disclaimers. <br>
+          <br>
+          If you want to add to this tool, talk to (whoever ends up being responsible for this) about getting your hands on the source code. <br>
+          I recommend some knowledge of python, html+css, and javascript, but if you find some other way of doing things (or want to redo this entirely), i'm sure that could work in some way. <br>
+          <br>
+          anyway, <a href="/db/">this is the main database thingy</a></p>
         </div>
+      <div class="footer">
+        <p>Powered by duct tape and spite</p>
+      </div>
     </div>
+  </div>
 </body>

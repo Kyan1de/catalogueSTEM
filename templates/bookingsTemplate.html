@@ -37,19 +37,15 @@
                 <input type="text" id="searchTerms" onkeyup="sortTable('searchTerms', 'data')" placeholder="Search by material">
                 <table id="data">
                     <tr>
-                        <th>name</th>
-                        <th>location</th>
-                        <th>available</th>
-                        <th>bookings</th>
-                        <th>book</th>
+                      <th>material</th>
+                      <th>booked by</th>
+                      <th>info</th>
                     </tr>
                     {% for a in data: %}
                     <tr>
                         <td>{{a[0]}}</td>
-                        <td class="hoverImg" style="--img: url({{ a[2] }})">{{a[1]}}</td>
-                        <td>{{a[3]}}</td>
-                        <td>{{a[4]}}</td>
-                        <td><button onclick="document.location.href='/book/{{ a[0] }}'">book {{a[0]}}</button></td>
+                        <td>{{a[1]}}</td>
+                        <td>{{a[2]}}</td>
                     </tr>
                     {% endfor %}
                 </table>

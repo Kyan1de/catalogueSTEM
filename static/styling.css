@@ -114,3 +114,16 @@ td, th {
     position: absolute;
     left: calc(100% + 5px);
 }
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 5px;
+    margin: auto;
+}
+
+form > h1 {
+    margin: auto;
+    text-align: center;
+}

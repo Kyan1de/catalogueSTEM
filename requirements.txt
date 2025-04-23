@@ -4,3 +4,4 @@ flask-migrate # db
 --only-binary :all: flask-sqlalchemy # db, bins because build is weird
 manyterm # multiple terminals
 tabulate # pretty tables for the command line
+

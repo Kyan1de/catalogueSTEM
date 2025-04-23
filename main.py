@@ -1,4 +1,5 @@
 # everything exclusively for the website
+import logging.config
 from flask import Flask, render_template, redirect, url_for, current_app, request
 from markupsafe import escape
 
@@ -7,16 +8,17 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # moving flask's log ouput
+import logging
 from logging.config import dictConfig
 
 # lets me have the input and server running at the same time
 from multiprocessing import Process
-from time import sleep
-import atexit
+
 
 # for the command line tool
 import tabulate
 from typing import Callable
+import subprocess
 
 #initializing all the flask sqlalchemy stuff
 class dBase(DeclarativeBase):
@@ -33,7 +35,7 @@ class Entry(db.Model):
 
 class Booking(db.Model):
     id: Mapped[int] = mapped_column(primary_key=True)
-    bookedMaterial: Mapped[str] = mapped_column(unique=True)
+    bookedMaterial: Mapped[str] = mapped_column()
     bookedBy: Mapped[str] = mapped_column()
     bookInfo: Mapped[str] = mapped_column()
 
@@ -47,6 +49,8 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+
+# --- pages ---
 # attaches the function to the provided route
 @app.route("/")
 @app.route("/index")
@@ -56,13 +60,30 @@ def index():
 @app.route("/db/")
 def lookup():
     data: list[Entry] = db.session.execute(db.select(Entry).order_by(Entry.name)).scalars().all()
-    return render_template('dbTemplate.html', data=[[entry.name, entry.locationText, entry.locationImg, f"{entry.available} / {entry.booked}"] for entry in data])
+    return render_template('dbTemplate.html', data=[[entry.name, entry.locationText, entry.locationImg, entry.available, entry.booked] for entry in data])
+
+@app.route("/db/bookings")
+def lookupBookings():
+    data: list[Booking] = db.session.execute(db.select(Booking).order_by(Booking.bookedBy)).scalars().all()
+    return render_template('bookingsTemplate.html', data=[[entry.bookedMaterial, entry.bookedBy, entry.bookInfo] for entry in data])
 
 @app.route("/book/<name>")
 def booking(name):
-    return render_template("index.html")
+    if request.args:
+        mat: Entry = db.session.execute(db.select(Entry).where(Entry.name == name)).scalar_one()
+        mat.booked += 1
+        db.session.add(Booking(bookedMaterial=name, bookedBy=request.args["name"], bookInfo=request.args["info"]))
+        db.session.commit()
+        # make page to say booking succeeded
+        return app.redirect("/Success")
+    else:
+        return render_template("bookingTemplate.html", entry=name)
 
-# handles command-line input. 
+@app.route("/Success")
+def success():
+    return render_template("success.html")
+
+# --- handling command-line input. ---
 # this will be the only way of adding things to the database for now
 
 def CLIAddEntry(command):
@@ -80,7 +101,6 @@ def CLIAddBooking(command):
     resourceName = input("what are you booking?")
     resource:Entry = db.session.execute(db.select(Entry).where(Entry.name == resourceName)).scalar_one_or_none()
     if resource is None: raise Exception(f"{resourceName} not found in catalogue, please check spelling")
-    elif resource.booked == resource.available: raise Exception(f"{resourceName} has been fully booked, try again later")
     else:
         bookee = input(f"who is booking the {resourceName}? ")
         info = input("any extra info? ")
@@ -167,7 +187,7 @@ def CLIRemoveEntry(command):
 def CLIRemoveBooking(command):
     if command[0] == "": raise Exception("invalid syntax, expected name of the entry")
     try:
-        elements: list[Booking] = db.session.execute(db.select(Booking).where(Booking.name.contains(command[0]))).scalars()
+        elements: list[Booking] = db.session.execute(db.select(Booking).where(Booking.bookedBy.contains(command[0]))).scalars()
         print(
             tabulate.tabulate(
                 [[element.id, element.bookedBy, element.bookedMaterial, element.bookInfo] for element in elements], 
@@ -220,7 +240,7 @@ def CLIViewBookings(command):
     while not end:
         print(
             tabulate.tabulate(
-                [[element.id, element.bookedBy, element.bookedMaterial, element.bookInfo] for element in elements], 
+                [[element.id, element.bookedBy, element.bookedMaterial, element.bookInfo] for element in data], 
                 ("id", "name", "material", "info"),
                 maxcolwidths=10
             ), "\n"
@@ -231,8 +251,9 @@ def CLIViewBookings(command):
             end = input(" CATA <e to end> ") == "e"
 
 # commands will be called using any tokens not consumed
+# as an example: 
 #   view entry [options] only passes [options]
-#   import [options] only passes [options] (NOT YET IMPLEMENTED)
+#   import [options] only passes [options]
 # if something has a default option, it uses the second case
 # defaults are optional
 
@@ -241,8 +262,26 @@ def CLIViewBookings(command):
 commandTable: dict[str, dict[str, Callable] | Callable] = {
     "add" : {"entry":CLIAddEntry, "booking":CLIAddBooking},
     "remove" : {"entry":CLIRemoveEntry, "booking":CLIRemoveBooking},
-    "view" : {"entries":CLIViewEntries, "bookings":CLIViewBookings},
-    "commit": db.session.commit
+    "view" : {"entries":CLIViewEntries, "bookings":CLIViewBookings, "default":CLIViewEntries},
+    "commit" : db.session.commit,
+    "clear" : (lambda _: print(u"{}[2J{}[;H".format(chr(27), chr(27)), end="")), # evil lambda statement
+}
+
+#  (both 'args' and 'description' can be empty, 
+#   this is just here to add things to the help menu. 
+#   nothing here is vital to functioning but do still 
+#   add to this when you add things)
+# command : [args, description]
+helpTable: dict[str, list[str, str]] = {
+    # hard-coded commands, dont touch unless you have a good reason
+    "help" : ["no arguments", "displays this help message"],
+    "quit" : ["no arguments", "exits the program"],
+
+    "add" : ["[entry, booking] name", "manually add an entry or booking to the database"],
+    "remove" : ["[entry, booking] name", "manually remove an entry or booking from the database"],
+    "view" : ["[entries, bookings]", "view the entries or bookings from the command line"],
+    "commit" : ["no arguments", "save any changes to file, making them visible to the server"],
+    "clear" : ["no arguments", "clear the terminal"],
 }
 
 def CLIHandler(appProc: Process):
@@ -260,14 +299,18 @@ def CLIHandler(appProc: Process):
                     appProc.close()
                     quit()
                 elif userInput.lower() == "help":
-                    print("if this message is still here, bug Kya about it\n") # do this later
+                    print(
+                        tabulate.tabulate([[command, helpTable[command][0], helpTable[command][1]] for command in helpTable.keys()],
+                                          headers=("", "arguments", "description"),
+                                          tablefmt="simple"), "\n"
+                    )
                 elif cmd[0] in commandTable.keys():
                     if type(commandTable[cmd[0]]) is dict:
                         if cmd[1] in commandTable[cmd[0]].keys():
                             commandTable[cmd[0]][cmd[1]](cmd[2:])
                         elif "default" in commandTable[cmd[0]].keys():
                             commandTable[cmd[0]]["default"](cmd[1:])
-                    elif type(commandTable[cmd[0]]) is Callable:
+                    elif callable(commandTable[cmd[0]]):
                         try:
                             commandTable[cmd[0]](cmd[1:])
                         except Exception:
@@ -277,6 +320,8 @@ def CLIHandler(appProc: Process):
                 print(f"something went wrong, please check your command in the help menu\nrolling back changes to SQL\n{e}\n")
                 db.session.rollback()
 
+# --- entry point(s) ---
+
 def runFlask():
     #setup logging
     dictConfig({
@@ -284,13 +329,19 @@ def runFlask():
         'formatters': {'default': {
             'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
         }},
-        'handlers': {'wsgi': {
-            'class': 'flaskLogger.myStreamHandler',
-            'formatter': 'default'
-        }},
+        'handlers': {
+            'wsgi': {
+                'class': 'flaskLogger.myStreamHandler',
+                'formatter': 'default'
+            },
+            'file': {
+                'class': 'logging.FileHandler',
+                'filename': 'error.log',
+                'mode': 'a',
+            }},
         'root': {
             'level': 'INFO',
-            'handlers': ['wsgi']
+            'handlers': ['wsgi', 'file']
         }
     })
     app.run()
@@ -299,6 +350,8 @@ if __name__ == "__main__":
     appProc = Process(target=runFlask)
     appProc.start()
     CLIHandler(appProc)
+
+# --- notes ---
 
 # Hello to whoever is editing this in the future
 # i have some suggestions for things to add that i couldnt in the time i had. 
@@ -310,4 +363,3 @@ if __name__ == "__main__":
 
 # todo:
 #  - booking form
-#  - test & improve CLI commands
