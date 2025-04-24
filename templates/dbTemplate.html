@@ -2,7 +2,6 @@
 <head>
     <meta charset="utf-8">
     <title>Hello from STEM</title>
-    <link href='https://fonts.googleapis.com/css?family=ADLaM Display' rel='stylesheet'>
     <link rel="stylesheet" href="/static/styling.css">
     <script>
         function sortTable(ipt, tbl) {
@@ -35,13 +34,14 @@
         <div class="inner">
             <div class="dbLookup">
                 <input type="text" id="searchTerms" onkeyup="sortTable('searchTerms', 'data')" placeholder="Search by material">
+                <small class="center-text">&#42;bookings are more there to show demand for that thing, rather than to reserve it</small>
                 <table id="data">
                     <tr>
-                        <th>name</th>
-                        <th>location</th>
-                        <th>available</th>
-                        <th>bookings</th>
-                        <th>book</th>
+                        <th style="width: 30%;">name</th>
+                        <th style="width: 40%;">location</th>
+                        <th style="width: 10%;">available</th>
+                        <th style="width: 10%;">bookings&#42;</th>
+                        <th style="width: 10%;">book</th>
                     </tr>
                     {% for a in data: %}
                     <tr>

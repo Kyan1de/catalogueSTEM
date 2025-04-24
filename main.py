@@ -39,6 +39,12 @@ class Booking(db.Model):
     bookedBy: Mapped[str] = mapped_column()
     bookInfo: Mapped[str] = mapped_column()
 
+class MaterialRequest(db.Model):
+    id: Mapped[int] = mapped_column(primary_key=True)
+    material: Mapped[str] = mapped_column(unique=True)
+    requestBy: Mapped[str] = mapped_column()
+    info: Mapped[str] = mapped_column()
+
 # handles the web application
 app = Flask(__name__)
 # connects the database
@@ -79,6 +85,21 @@ def booking(name):
     else:
         return render_template("bookingTemplate.html", entry=name)
 
+@app.route("/db/requests")
+def lookupRequests():
+    data: list[MaterialRequest] = db.session.execute(db.select(MaterialRequest).order_by(MaterialRequest.material)).scalars().all()
+    return render_template('requestsTemplate.html', data=[[entry.material, entry.requestBy, entry.info] for entry in data])
+
+@app.route("/request")
+def makeRequest():
+    if request.args:
+        db.session.add(MaterialRequest(material=request.args["material"], requestBy=request.args["name"], info=request.args["info"]))
+        db.session.commit()
+        # make page to say booking succeeded
+        return app.redirect("/Success")
+    else:
+        return render_template("requestTemplate.html")
+
 @app.route("/Success")
 def success():
     return render_template("success.html")
@@ -96,18 +117,6 @@ def CLIAddEntry(command):
         db.session.add(Entry(name=command[0], locationText=locationText, locationImg=locationImg, available=available, booked=0))
     except Exception as e:
         print(f"failed to add entry, it may already exist\n{e}\n")
-
-def CLIAddBooking(command):
-    resourceName = input("what are you booking?")
-    resource:Entry = db.session.execute(db.select(Entry).where(Entry.name == resourceName)).scalar_one_or_none()
-    if resource is None: raise Exception(f"{resourceName} not found in catalogue, please check spelling")
-    else:
-        bookee = input(f"who is booking the {resourceName}? ")
-        info = input("any extra info? ")
-        try:
-            db.session.add(Booking(bookedMaterial=resourceName, bookedBy=bookee, bookInfo=info))
-        except Exception as e:
-            print(f"failed to add booking\n{e}\n")
 
 def CLIEditEntry(command):
     if len(command) != 2: raise Exception("invalid syntax, expected the name of the entry and the info you wanted to change\n('locationText', 'locationImg', or 'count')")
@@ -135,6 +144,65 @@ def CLIEditEntry(command):
         if command[1] == "locationText": input(f"text location of {element.name}: ")
         if command[1] == "locationImg": input(f"image location of {element.name}: ")
 
+def CLIRemoveEntry(command):
+    if command[0] == "": raise Exception("invalid syntax, expected name of the entry")
+    try:
+        elements = db.session.execute(db.select(Entry).where(Entry.name.contains(command[0]))).scalars()
+        print(
+            tabulate.tabulate(
+                [[element.id, element.name, element.locationText, element.locationImg, element.available, element.booked] for element in elements], 
+                ("id", "name", "location text", "location image", "available", "booked"),
+                maxcolwidths=10
+            ), "\n"
+        )
+    except Exception as e:
+        print(f"no entries found\n")
+        return
+
+    toDelete = ""
+    while not toDelete.isdigit() and toDelete != "x":
+        toDelete = input("enter the ID of the entry to delete (x to cancel): ")
+    if toDelete == 'x':
+        return
+    else:
+        element:Entry = db.session.execute(db.select(Entry).where(Entry.id == int(toDelete))).scalar_one()
+        db.session.execute(db.delete(Booking).where(Booking.bookedMaterial == element.name))
+        db.session.delete(element)
+
+def CLIViewEntries(command):
+    data:list[Entry] = db.session.execute(db.select(Entry).order_by(Entry.name)).scalars().all()
+    if len(data) == 0:
+        print("no entries in the database\n")
+        return
+    offset = 0
+    ENTRIES_PER_PAGE = 10
+    end=False
+    while not end:
+        print(
+            tabulate.tabulate(
+                [[element.id, element.name, element.locationText, element.locationImg, element.available, element.booked] for element in data[offset:min(offset+ENTRIES_PER_PAGE, len(data))]], 
+                ("id", "name", "location text", "location image", "available", "booked"),
+                maxcolwidths=10
+            ), "\n"
+        )
+        if len(data) < offset + ENTRIES_PER_PAGE:
+            end = True
+        else:
+            end = input(" CATA <e to end> ") == "e"
+
+
+def CLIAddBooking(command):
+    resourceName = input("what are you booking?")
+    resource:Entry = db.session.execute(db.select(Entry).where(Entry.name == resourceName)).scalar_one_or_none()
+    if resource is None: raise Exception(f"{resourceName} not found in catalogue, please check spelling")
+    else:
+        bookee = input(f"who is booking the {resourceName}? ")
+        info = input("any extra info? ")
+        try:
+            db.session.add(Booking(bookedMaterial=resourceName, bookedBy=bookee, bookInfo=info))
+        except Exception as e:
+            print(f"failed to add booking\n{e}\n")
+
 def CLIEditBooking(command):
     if len(command) != 2: raise Exception("invalid syntax, expected the name of the booking and the info you wanted to change\n('name' or 'info')")
     if command[1] not in ["name","info"]: raise Exception("invalid attribute") 
@@ -160,30 +228,6 @@ def CLIEditBooking(command):
         if command[1] == "name": input(f"name of person booking {element.bookedMaterial}: ")
         if command[1] == "info": input(f"info for the booking: ")
 
-def CLIRemoveEntry(command):
-    if command[0] == "": raise Exception("invalid syntax, expected name of the entry")
-    try:
-        elements = db.session.execute(db.select(Entry).where(Entry.name.contains(command[0]))).scalars()
-        print(
-            tabulate.tabulate(
-                [[element.id, element.name, element.locationText, element.locationImg, element.available, element.booked] for element in elements], 
-                ("id", "name", "location text", "location image", "available", "booked"),
-                maxcolwidths=10
-            ), "\n"
-        )
-    except Exception as e:
-        print(f"no entries found\n")
-        return
-
-    toDelete = ""
-    while not toDelete.isdigit() and toDelete != "x":
-        toDelete = input("enter the ID of the entry to delete (x to cancel): ")
-    if toDelete == 'x':
-        return
-    else:
-        element = db.session.execute(db.select(Entry).where(Entry.id == int(toDelete))).scalar_one()
-        db.session.delete(element)
-
 def CLIRemoveBooking(command):
     if command[0] == "": raise Exception("invalid syntax, expected name of the entry")
     try:
@@ -205,29 +249,11 @@ def CLIRemoveBooking(command):
     if toDelete == 'x':
         return
     else:
-        element = db.session.execute(db.select(Booking).where(Booking.id == int(toDelete))).scalar_one()
+        element:Booking = db.session.execute(db.select(Booking).where(Booking.id == int(toDelete))).scalar_one()
+        entry:Entry = db.session.execute(db.select(Entry).where(Entry.name == element.bookedMaterial)).scalar_one_or_none()
+        if entry is not None:
+            entry.booked -= 1
         db.session.delete(element)
-
-def CLIViewEntries(command):
-    data:list[Entry] = db.session.execute(db.select(Entry).order_by(Entry.name)).scalars().all()
-    if len(data) == 0:
-        print("no entries in the database\n")
-        return
-    offset = 0
-    ENTRIES_PER_PAGE = 10
-    end=False
-    while not end:
-        print(
-            tabulate.tabulate(
-                [[element.id, element.name, element.locationText, element.locationImg, element.available, element.booked] for element in data[offset:min(offset+ENTRIES_PER_PAGE, len(data))]], 
-                ("id", "name", "location text", "location image", "available", "booked"),
-                maxcolwidths=10
-            ), "\n"
-        )
-        if len(data) < offset + ENTRIES_PER_PAGE:
-            end = True
-        else:
-            end = input(" CATA <e to end> ") == "e"
 
 def CLIViewBookings(command):
     data:list[Booking] = db.session.execute(db.select(Booking).order_by(Booking.bookedMaterial)).scalars().all()
@@ -240,7 +266,7 @@ def CLIViewBookings(command):
     while not end:
         print(
             tabulate.tabulate(
-                [[element.id, element.bookedBy, element.bookedMaterial, element.bookInfo] for element in data], 
+                [[element.id, element.bookedBy, element.bookedMaterial, element.bookInfo] for element in data[offset:min(offset+ENTRIES_PER_PAGE, len(data))]], 
                 ("id", "name", "material", "info"),
                 maxcolwidths=10
             ), "\n"
@@ -249,6 +275,87 @@ def CLIViewBookings(command):
             end = True
         else:
             end = input(" CATA <e to end> ") == "e"
+
+
+def CLIAddRequest(command):
+    # command is padded with an empty string, so we check for that instead of the length of the command
+    if command[0] == "": raise Exception("invalid syntax, expected name of the material. ")
+    else:
+        resourceName = command[0]
+        requestee = input(f"who is requesting the {resourceName}? ")
+        info = input("any extra info? (links are helpful) ")
+        try:
+            db.session.add(MaterialRequest(material=resourceName, requestBy=requestee, info=info))
+        except Exception as e:
+            print(f"failed to add request\n{e}\n")
+
+def CLIEditRequest(command):
+    try:
+        elements:list[MaterialRequest] = db.session.execute(db.select(MaterialRequest).where(MaterialRequest.material.contains(command[0]))).scalars()
+        print(
+            tabulate.tabulate(
+                [[element.id, element.material, element.requestBy, element.info] for element in elements], 
+                ("id", "material", "booked by", "info"),
+                maxcolwidths=10
+            ), "\n"
+        )
+    except Exception as e:
+        print("no requests found\n")
+        return
+    toEdit = ""
+    while not toEdit.isdigit() and toEdit != "x":
+        toEdit = input("enter the ID of the request to edit (x to cancel): ")
+    if toEdit == 'x':
+        return
+    else:
+        element: MaterialRequest = db.session.execute(db.select(MaterialRequest).where(MaterialRequest.id == int(toEdit))).scalar_one()
+        info = input("replace info with: ")
+        element.info = info
+
+def CLIRemoveRequest(command):
+    if command[0] == "": raise Exception("invalid syntax, expected name of the request")
+    try:
+        elements:list[MaterialRequest] = db.session.execute(db.select(MaterialRequest).where(MaterialRequest.material.contains(command[0]))).scalars()
+        print(
+            tabulate.tabulate(
+                [[element.id, element.material, element.requestBy, element.info] for element in elements], 
+                ("id", "material", "booked by", "info"),
+                maxcolwidths=10
+            ), "\n"
+        )
+    except Exception as e:
+        print("no requests found\n")
+        return
+    toDelete = ""
+    while not toDelete.isdigit() and toDelete != "x":
+        toDelete = input("enter the ID of the booking to delete (x to cancel): ")
+    if toDelete == 'x':
+        return
+    else:
+        element:MaterialRequest = db.session.execute(db.select(MaterialRequest).where(MaterialRequest.id == int(toDelete))).scalar_one()
+        db.session.delete(element)
+
+def CLIViewRequests(command):
+    data:list[MaterialRequest] = db.session.execute(db.select(MaterialRequest).order_by(MaterialRequest.material)).scalars().all()
+    if len(data) == 0:
+        print("no requests in the database\n")
+        return
+    offset = 0
+    ENTRIES_PER_PAGE = 5
+    end=False
+    while not end:
+        print(
+            tabulate.tabulate(
+                [[element.id, element.material, element.requestBy, element.info] for element in data[offset:min(offset+ENTRIES_PER_PAGE, len(data))]], 
+                ("id", "material", "booked by", "info"),
+                maxcolwidths=10
+            ), "\n"
+        )
+        if len(data) < offset + ENTRIES_PER_PAGE:
+            end = True
+        else:
+            end = input(" CATA <e to end> ") == "e"
+
 
 # commands will be called using any tokens not consumed
 # as an example: 
@@ -260,9 +367,10 @@ def CLIViewBookings(command):
 # command : {subcommand:func, "default":defaultFunc}
 # command : func
 commandTable: dict[str, dict[str, Callable] | Callable] = {
-    "add" : {"entry":CLIAddEntry, "booking":CLIAddBooking},
-    "remove" : {"entry":CLIRemoveEntry, "booking":CLIRemoveBooking},
-    "view" : {"entries":CLIViewEntries, "bookings":CLIViewBookings, "default":CLIViewEntries},
+    "add" : {"entry":CLIAddEntry, "booking":CLIAddBooking, "request":CLIAddRequest},
+    "edit" : {"entry":CLIEditEntry, "booking":CLIEditBooking, "request":CLIEditRequest},
+    "remove" : {"entry":CLIRemoveEntry, "booking":CLIRemoveBooking, "request":CLIRemoveRequest},
+    "view" : {"entries":CLIViewEntries, "bookings":CLIViewBookings, "requests":CLIViewRequests, "default":CLIViewEntries},
     "commit" : db.session.commit,
     "clear" : (lambda _: print(u"{}[2J{}[;H".format(chr(27), chr(27)), end="")), # evil lambda statement
 }
@@ -277,9 +385,10 @@ helpTable: dict[str, list[str, str]] = {
     "help" : ["no arguments", "displays this help message"],
     "quit" : ["no arguments", "exits the program"],
 
-    "add" : ["[entry, booking] name", "manually add an entry or booking to the database"],
-    "remove" : ["[entry, booking] name", "manually remove an entry or booking from the database"],
-    "view" : ["[entries, bookings]", "view the entries or bookings from the command line"],
+    "add" : ["[entry, booking, request] name", "manually add a row to a table"],
+    "edit" : ["[entry, booking, request] name", "edits a row in a table"],
+    "remove" : ["[entry, booking, request] name", "manually remove a row from a table"],
+    "view" : ["[entries, bookings, requests]", "view the tables from the command line"],
     "commit" : ["no arguments", "save any changes to file, making them visible to the server"],
     "clear" : ["no arguments", "clear the terminal"],
 }
@@ -362,4 +471,4 @@ if __name__ == "__main__":
 #    the CLI is a bit clunky at the moment
 
 # todo:
-#  - booking form
+#  - request form

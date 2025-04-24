@@ -34,11 +34,10 @@
         <div class="inner">
             <div class="dbLookup">
                 <input type="text" id="searchTerms" onkeyup="sortTable('searchTerms', 'data')" placeholder="Search by material">
-                <small class="center-text">&#42;bookings are more there to show demand for that thing, rather than to reserve it</small>
                 <table id="data">
                     <tr>
                       <th style="width: 20%;">material</th>
-                      <th style="width: 20%;">booked by</th>
+                      <th style="width: 20%;">request by</th>
                       <th style="width: 60%;">info</th>
                     </tr>
                     {% for a in data: %}
@@ -49,6 +48,10 @@
                     </tr>
                     {% endfor %}
                 </table>
+                <div class="org-row">
+                  <p>cant find what you're looking for?</p>
+                  <a id="makeRequest" href="/request">Make a request</a>
+                </div>
             </div>
             <div class="footer">
                 <p>Powered by duct tape and spite</p>

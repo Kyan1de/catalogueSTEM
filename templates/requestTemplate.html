@@ -11,13 +11,15 @@
     <div class="inner">
       <div class="formContainer">
         <form>
-          <h1>booking for {{ entry }}</h1>
+          <h1>Request Form</h1>
           <label for="name">name: </label>
           <input type="text" name="name" id="name">
-          <label for="info">extra info for the booking: </label>
+          <label for="material">material: </label>
+          <input type="text" name="material" id="material">
+          <label for="info">extra info for the request: </label>
           <textarea rows="10" cols="30" name="info" id="info"></textarea>
+          <small class="center-text">links are helpful, please include them if you have them!</small>
           <input type="submit", value="submit">
-          <small class="center-text">&#42;bookings are more there to show demand for that thing, rather than to reserve it</small>
         </form>
       </div>
       <div class="footer">
