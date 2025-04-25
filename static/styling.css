@@ -107,7 +107,6 @@ body {
 }
 #data {
     border: 2px solid #000000;
-    table-layout: fixed;
 }
 #searchTerms {
     display: block;
@@ -115,6 +114,7 @@ body {
 td, th {
     border: 1px solid #000000;
     padding: 2px 5px;
+    min-width: 95px;
 }
 th {
     font-weight: 600;

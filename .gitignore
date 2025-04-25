@@ -4,3 +4,6 @@ __pycache__/
 
 #logging stuff
 *.log
+
+#db
+instance/
