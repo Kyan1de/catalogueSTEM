@@ -1,5 +1,4 @@
 flask
-flask-migrate # db
 --only-binary :all: greenlet
 --only-binary :all: flask-sqlalchemy # db, bins because build is weird
 manyterm # multiple terminals

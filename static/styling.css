@@ -152,6 +152,15 @@ h1 {
     font-weight: 650;
 }
 
+h3 {
+    margin-top: 30px;
+    font-weight: 600;
+}
+
+p {
+    margin: 10px 0 0 0;
+}
+
 small {
     font-weight: 200;
 }

@@ -53,11 +53,14 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
 db.init_app(app)
 
 with app.app_context():
+    # initializes the database. 
+    # if you need to undo this, delete the newly created "instance" folder. 
+    # that will delete ALL of the data stored there though, so be careful. 
+    # -Kya 2025
     db.create_all()
 
 
 # --- pages ---
-# attaches the function to the provided route
 @app.route("/")
 @app.route("/index")
 def index():
@@ -93,16 +96,26 @@ def lookupRequests():
 @app.route("/request")
 def makeRequest():
     if request.args:
-        db.session.add(MaterialRequest(material=request.args["material"], requestBy=request.args["name"], info=request.args["info"]))
-        db.session.commit()
-        # make page to say booking succeeded
-        return app.redirect("/Success")
+        try:
+            db.session.add(MaterialRequest(material=request.args["material"], requestBy=request.args["name"], info=request.args["info"]))
+            db.session.commit()
+            return app.redirect("/Success")
+        except Exception as e:
+            return render_template("fail.html", errorText=e.__repr__())
     else:
         return render_template("requestTemplate.html")
 
 @app.route("/Success")
 def success():
     return render_template("success.html")
+
+@app.route("/contributing")
+def contributing():
+    return render_template("contributing.html")
+
+@app.errorhandler(404)
+def pageNotFound(e):
+    return render_template("404.html")
 
 # --- handling command-line input. ---
 # this will be the only way of adding things to the database for now
@@ -372,7 +385,7 @@ commandTable: dict[str, dict[str, Callable] | Callable] = {
     "remove" : {"entry":CLIRemoveEntry, "booking":CLIRemoveBooking, "request":CLIRemoveRequest},
     "view" : {"entries":CLIViewEntries, "bookings":CLIViewBookings, "requests":CLIViewRequests, "default":CLIViewEntries},
     "commit" : db.session.commit,
-    "clear" : (lambda _: print(u"{}[2J{}[;H".format(chr(27), chr(27)), end="")), # evil lambda statement
+    "clear" : (lambda _: print(u"{}[2J{}[;H".format(chr(27), chr(27)), end="")), # evil lambda statement -Kya, 2025
 }
 
 #  (both 'args' and 'description' can be empty, 
@@ -462,13 +475,11 @@ if __name__ == "__main__":
 
 # --- notes ---
 
-# Hello to whoever is editing this in the future
-# i have some suggestions for things to add that i couldnt in the time i had. 
-# 
-#  -  importing + exporting data through Tab Seperated Values
-#    This would let you import and export data to and from google sheets, 
-#    which might make entering a lot of data a bit easier, especially since
-#    the CLI is a bit clunky at the moment
+# Hello to whoever is reading this in the future
+# I apologize for whatever generational curses you acquired reading my code
+# I also hope that the work I have done to make this easier to edit has payed off in the long run
+# -Kya, 2025
 
-# todo:
-#  - request form
+# oh yeah, when you leave a comment that isnt like... vital documentation, make sure to sign it with -[your first name], [current year]
+# this should make it a little easier to keep track of what's documentation and what's convention and stuff. 
+# -Kya, 2025

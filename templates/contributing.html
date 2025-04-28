@@ -1,0 +1,74 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Hello from STEM</title>
+    <link rel="stylesheet" href="/static/styling.css">
+    {% from 'macros.html' import navbar %}
+</head>
+<body>
+  {{ navbar() }}
+  <div class="container">
+    <div class="inner">
+      <div>
+        <h1>Contributing</h1>
+        <p>Okay, some things you'll need to know before getting started:</p>
+        <ol>
+            <li>The backend of this was built using Python + flask + misc. extensions, which are:</li>
+            <ol>
+              <li>flask-sqlalchemy [DB]</li>
+              <li>tabulate [CLI]</li>
+              <li>manyterm [CLI]</li>
+            </ol>
+            <li>The frontend is plain html + css + javascript</li>
+        </ol>
+        <p>while you <em>can</em> use another language to add to the project, I wouldn't recommend doing so as it makes the project harder to maintain. </p>
+        <hr>
+        <p>The code is currently in one* file, split into four sections. </p>
+        <small>*the <code>flaskLogger.py</code> file is a workaround for an issue with manyterm, you can pretty safely ignore it</small>
+        <br><br>
+        <h3>Section 1: Initialization</h3>
+        <p>This section Initializes and configures everything prior to the server starting. 
+          This includes any tables you may have added to the project
+        </p>
+        
+        <h3>Section 2: Routing</h3>
+        <p>This section sets up all of the pages accessible to client-side users. Please note, 
+          this is only really necessary for pages that have more advanced behavior, static assets 
+          such as images and css files should just be put into the <code>static</code> folder.
+        </p>
+        
+        <h3>Section 3: the CLI</h3>
+        <p>This section holds all of the functions for the command-line interface. Adding to this 
+          should be fairly easy, only requiring you to add to the command and help tables below all 
+          of the functions. Documentation for how those tables behave will be found just above them. 
+        </p>
+        
+        <h3>Section 4: Entrypoints</h3>
+        <p>This section handles all of the startup logic. currently it always starts the flask server 
+          as a subprocess, sending its output to a different window, and starts the command-line input loop. 
+          If any other modes for the application are made, you will likely need to make changes to this section. 
+        </p>
+        
+        <hr>
+        
+        <h2>Possible additions</h2>
+        <ul>
+          <li>A graphical interface, likely using <code>tkinter</code></li>
+          <li>A way to import data from google sheets, likely using TSV format as an inbetween</li>
+        </ul>
+        
+      </div>
+    </div>
+    
+    <div class="footer">
+        <p>Powered by duct tape and spite</p>
+      </div>
+    </div>
+  </div>
+</body>
+
+<!--
+# todo:
+#  - import/export to Tab-Seperated-Values (lets you import from/export to google sheets)
+#  - GUI version of the program, currently unfinished. 
+-->
